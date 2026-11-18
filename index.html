@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess Advisor</title>
+<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #141414; color: #e0e0e0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 24px; gap: 24px; flex-wrap: wrap; }
+  #board { width: 480px; max-width: 90vw; }
+  .panel { width: 300px; max-width: 90vw; background: #202020; border-radius: 8px; padding: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: 1px; color: #8a8a8a; text-transform: uppercase; }
+  .status { font-size: 12px; color: #7a7a7a; margin-bottom: 12px; font-family: ui-monospace, monospace; }
+  .suggestion { padding: 10px 12px; margin-bottom: 8px; background: #2a2a2a; border-left: 3px solid #4a8a5a; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 14px; }
+  .suggestion.mate { border-left-color: #d43a3a; background: #2e1e1e; }
+  .suggestion .line { color: #777; font-size: 11px; margin-top: 5px; line-height: 1.5; }
+  .suggestion .score { float: right; color: #a8c8a8; font-weight: 600; }
+  .suggestion.mate .score { color: #e07070; }
+  .controls { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls button { background: #333; color: #ddd; border: 1px solid #444; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .controls button:hover { background: #3e3e3e; }
+  .highlight-best { box-shadow: inset 0 0 0 3px #4a8a5a !important; }
+  .highlight-mate { box-shadow: inset 0 0 0 3px #d43a3a !important; }
+</style>
+</head>
+<body>
+<div id="board"></div>
+<div class="panel">
+  <h2>Best Moves</h2>
+  <div class="status" id="status">ready</div>
+  <div id="suggestions"></div>
+  <div class="controls">
+    <button id="btn-flip">Flip</button>
+    <button id="btn-undo">Undo</button>
+    <button id="btn-reset">Reset</button>
+    <button id="btn-depth">Depth: 3</button>
+  </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
+<script>
+var game = new Chess();
+var board = null;
+var currentDepth = 3;
+var thinking = false;
+var suggestionState = {};
+
+var $status = document.getElementById('status');
+var $suggestions = document.getElementById('suggestions');
+
+var PIECE_VALUE = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+var PST = {
+  p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+  n: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+  b: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+  r: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+  q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+  k: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
+};
+
+function setStatus(t) { $status.textContent = t; }
+
+function evaluateBoard(g) {
+  var score = 0;
+  var b = g.board();
+  for (var r = 0; r < 8; r++) {
+    for (var c = 0; c < 8; c++) {
+      var sq = b[r][c];
+      if (!sq) continue;
+      var val = PIECE_VALUE[sq.type] + PST[sq.type][(sq.color === 'w' ? r : 7 - r) * 8 + c];
+      score += (sq.color === 'w' ? 1 : -1) * val;
+    }
+  }
+  return score;
+}
+
+function search(g, depth, alpha, beta, maximizing) {
+  if (depth === 0) return quiesce(g, alpha, beta, maximizing);
+  if (g.game_over()) {
+    if (g.in_checkmate()) return maximizing ? -100000 - depth * 100 : 100000 + depth * 100;
+    return 0;
+  }
+  var moves = g.moves({ verbose: true });
+  orderMoves(g, moves);
+  if (maximizing) {
+    var best = -Infinity;
+    for (var i = 0; i < moves.length; i++) {
+      g.move(moves[i]);
+      var s = search(g, depth - 1, alpha, beta, false);
+      g.undo();
+      if (s > best) best = s;
+      if (best > alpha) alpha = best;
+      if (alpha >= beta) break;
+    }
+    return best;
+  } else {
+    var best2 = Infinity;
+    for (var j = 0; j < moves.length; j++) {
+      g.move(moves[j]);
+      var s2 = search(g, depth - 1, alpha, beta, true);
+      g.undo();
+      if (s2 < best2) best2 = s2;
+      if (best2 < beta) beta = best2;
+      if (alpha >= beta) break;
+    }
+    return best2;
+  }
+}
+
+function quiesce(g, alpha, beta, maximizing) {
+  var stand = evaluateBoard(g) * (maximizing ? 1 : -1);
+  if (stand >= beta) return beta;
+  if (stand > alpha) alpha = stand;
+  var caps = g.moves({ verbose: true }).filter(function (m) { return m.flags.indexOf('c') !== -1 || m.flags.indexOf('e') !== -1; });
+  for (var i = 0; i < caps.length; i++) {
+    g.move(caps[i]);
+    var s = -quiesce(g, -beta, -alpha, !maximizing);
+    g.undo();
+    if (s >= beta) return beta;
+    if (s > alpha) alpha = s;
+  }
+  return alpha;
+}
+
+function orderMoves(g, moves) {
+  moves.sort(function (a, b) {
+    var av = 0, bv = 0;
+    if (a.captured) av = PIECE_VALUE[a.captured];
+    if (b.captured) bv = PIECE_VALUE[b.captured];
+    if (a.promotion) av += 800;
+    if (b.promotion) bv += 800;
+    return bv - av;
+  });
+}
+
+function findBestMoves(g, depth) {
+  var moves = g.moves({ verbose: true });
+  orderMoves(g, moves);
+  var results = [];
+  var maximizing = g.turn() === 'w';
+  for (var i = 0; i < moves.length; i++) {
+    g.move(moves[i]);
+    var s = search(g, depth - 1, -Infinity, Infinity, !maximizing);
+    g.undo();
+    results.push({ move: moves[i], score: s });
+  }
+  results.sort(function (a, b) {
+    return maximizing ? b.score - a.score : a.score - b.score;
+  });
+  return results.slice(0, 3);
+}
+
+function scoreToMate(score) {
+  if (score > 90000) return Math.ceil((100000 - score) / 200);
+  if (score < -90000) return -Math.ceil((100000 + score) / 200);
+  return null;
+}
+
+function runAnalysis() {
+  if (thinking) return;
+  thinking = true;
+  setStatus('thinking depth ' + currentDepth + '…');
+  setTimeout(function () {
+    var t0 = performance.now();
+    var results = findBestMoves(game, currentDepth);
+    var elapsed = Math.round(performance.now() - t0);
+    suggestionState = {};
+    $suggestions.innerHTML = '';
+    var maximizing = game.turn() === 'w';
+    results.forEach(function (r, idx) {
+      var mate = scoreToMate(r.score);
+      var cp = mate === null ? r.score * (maximizing ? 1 : -1) : null;
+      renderSuggestion(idx + 1, {
+        san: r.move.san,
+        from: r.move.from,
+        to: r.move.to,
+        cp: cp,
+        mate: mate,
+        line: [r.move.san]
+      });
+    });
+    if (results[0]) highlightMove(results[0].move.from + results[0].move.to, scoreToMate(results[0].score) !== null);
+    setStatus('ready · depth ' + currentDepth + ' · ' + elapsed + 'ms');
+    thinking = false;
+  }, 20);
+}
+
+function renderSuggestion(idx, data) {
+  var div = document.createElement('div');
+  div.className = 'suggestion' + (data.mate !== null ? ' mate' : '');
+  var scoreText = data.mate !== null ? 'M' + Math.abs(data.mate) : ((data.cp >= 0 ? '+' : '') + (data.cp / 100).toFixed(2));
+  div.innerHTML = '<span class="score">' + scoreText + '</span>#' + idx + ' ' + data.san + '<div class="line">' + data.from + '→' + data.to + '</div>';
+  $suggestions.appendChild(div);
+}
+
+function highlightMove(uci, isMate) {
+  var els = document.querySelectorAll('.highlight-best, .highlight-mate');
+  for (var i = 0; i < els.length; i++) els[i].classList.remove('highlight-best', 'highlight-mate');
+  if (!uci || uci.length < 4) return;
+  var cls = isMate ? 'highlight-mate' : 'highlight-best';
+  [uci.slice(0, 2), uci.slice(2, 4)].forEach(function (sq) {
+    var el = document.querySelector('.square-' + sq);
+    if (el) el.classList.add(cls);
+  });
+}
+
+function onDragStart(source, piece) {
+  if (game.game_over()) return false;
+  if ((game.turn() === 'w' && piece.indexOf('b') === 0) || (game.turn() === 'b' && piece.indexOf('w') === 0)) return false;
+}
+
+function onDrop(source, target) {
+  var move = game.move({ from: source, to: target, promotion: 'q' });
+  if (move === null) return 'snapback';
+  board.position(game.fen());
+  runAnalysis();
+}
+
+function onSnapEnd() { board.position(game.fen()); }
+
+board = Chessboard('board', {
+  draggable: true,
+  position: 'start',
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onSnapEnd: onSnapEnd,
+  pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png'
+});
+
+document.getElementById('btn-flip').onclick = function () { board.flip(); };
+document.getElementById('btn-undo').onclick = function () {
+  game.undo();
+  board.position(game.fen());
+  runAnalysis();
+};
+document.getElementById('btn-reset').onclick = function () {
+  game = new Chess();
+  board.position('start');
+  $suggestions.innerHTML = '';
+  runAnalysis();
+};
+document.getElementById('btn-depth').onclick = function (e) {
+  currentDepth = currentDepth === 3 ? 4 : currentDepth === 4 ? 2 : 3;
+  e.target.textContent = 'Depth: ' + currentDepth;
+  runAnalysis();
+};
+
+runAnalysis();
+</script>
+</body>
+</html>
