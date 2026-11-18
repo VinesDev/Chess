@@ -1,0 +1,113 @@
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;font-family:system-ui,sans-serif;
+  background:#0f1116;color:#e8ecf1;
+  display:flex;flex-direction:column;align-items:center;padding:20px 14px;
+}
+h1{
+  background:linear-gradient(90deg,#d4af37,#f0d878);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  margin:0 0 4px;font-size:1.4rem;
+}
+.sub{color:#8b93a5;font-size:.8rem;margin-bottom:16px}
+
+.wrap{
+  display:grid;grid-template-columns:auto 360px;gap:18px;
+  align-items:start;max-width:1000px;width:100%;
+}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+
+/* Papan catur */
+#board{
+  width:min(72vw,460px);max-width:460px;min-height:300px;
+  border-radius:10px;overflow:hidden;box-shadow:0 0 0 2px #2a2f3a;
+}
+.white-1e1d7{background:#e9edf2!important;color:#6b7280!important}
+.black-3c85d{background:#5b6472!important;color:#e8ecf1!important}
+.hl-from{box-shadow:inset 0 0 0 4px #d4af37!important}
+.hl-to{box-shadow:inset 0 0 0 4px #3ddc84!important}
+.hl-hint{box-shadow:inset 0 0 0 4px #ff9f43!important}
+.hl-check{box-shadow:inset 0 0 0 4px #ff5d5d!important}
+
+/* Panel */
+.panel{background:#171a22;border:1px solid #2a2f3a;border-radius:12px;padding:14px;margin-bottom:12px}
+.panel h2{font-size:.8rem;letter-spacing:1px;text-transform:uppercase;color:#d4af37;margin:0 0 8px}
+
+/* Status */
+.status{
+  padding:10px;border-radius:8px;background:#0e1118;border:1px solid #2a2f3a;
+  font-size:.82rem;margin-bottom:8px;min-height:40px;display:flex;align-items:center;
+}
+.status.ok{border-color:#3ddc84}
+.status.warn{border-color:#ff9f43}
+.status.bad{border-color:#ff5d5d}
+.status.blue{border-color:#5aa9ff}
+
+/* Kualitas */
+.qbox{
+  padding:10px;border-radius:8px;background:#0e1118;border:1px solid #2a2f3a;
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;min-height:50px;
+}
+.badge{font-weight:800;font-size:.72rem;padding:4px 9px;border-radius:20px;color:#0f1116;white-space:nowrap}
+.desc{font-size:.72rem;color:#8b93a5;line-height:1.35}
+
+/* Buttons */
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+button{
+  cursor:pointer;border:none;border-radius:8px;padding:9px;font-weight:700;font-size:.76rem;
+  color:#0f1116;background:linear-gradient(180deg,#f0d878,#d4af37);transition:.15s;
+}
+button:hover{filter:brightness(1.1)}
+button.ghost{background:#222836;color:#e8ecf1;border:1px solid #2a2f3a}
+button.full{grid-column:1/-1}
+
+/* Eval bar */
+.eval-bar{
+  height:12px;border-radius:6px;background:#0e1118;border:1px solid #2a2f3a;
+  overflow:hidden;margin-bottom:8px;position:relative;
+}
+.eval-fill{height:100%;background:linear-gradient(90deg,#e9edf2,#d4af37);transition:width .25s}
+.eval-label{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:.64rem;font-weight:700;color:#0f1116;
+}
+
+/* Log */
+.log{
+  max-height:180px;overflow:auto;font-family:ui-monospace,monospace;font-size:.72rem;
+  background:#0e1118;border:1px solid #2a2f3a;border-radius:8px;padding:6px;
+}
+.log div{
+  padding:3px;border-bottom:1px dashed #1f2430;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.log div:last-child{border-bottom:none}
+.log .mv{color:#f0d878}
+.log .ev{color:#8b93a5;font-size:.66rem}
+.log .q{font-size:.6rem;padding:1px 5px;border-radius:8px;font-weight:800;color:#0f1116}
+.log .blunder{background:rgba(255,93,93,.12);border-left:3px solid #ff5d5d}
+.log .best{background:rgba(61,220,132,.10);border-left:3px solid #3ddc84}
+
+/* Import */
+textarea,input{
+  width:100%;background:#0e1118;border:1px solid #2a2f3a;border-radius:6px;
+  color:#e8ecf1;padding:8px;font-family:ui-monospace,monospace;font-size:.74rem;
+}
+
+/* Summary */
+.summary{
+  background:#0e1118;border:1px solid #2a2f3a;border-radius:8px;
+  padding:8px;font-size:.74rem;line-height:1.5;margin-top:6px;
+}
+.val{color:#f0d878;font-weight:700}
+
+/* Watermark */
+.watermark{
+  position:fixed;bottom:10px;right:12px;font-size:.7rem;color:#8b93a5;
+  background:rgba(15,17,22,.75);border:1px solid #2a2f3a;
+  padding:4px 10px;border-radius:20px;backdrop-filter:blur(6px);z-index:99;
+}
+.watermark b{
+  background:linear-gradient(90deg,#d4af37,#f0d878);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
