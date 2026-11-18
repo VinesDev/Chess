@@ -1,318 +1,430 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chess Advisor</title>
-<link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>♟️ Chess Analysis — Stockfish</title>
+<link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
+<script src="https://unpkg.com/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js"></script>
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, sans-serif; background: #141414; color: #e0e0e0; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 24px; gap: 24px; flex-wrap: wrap; }
-  #board { width: 480px; max-width: 90vw; }
-  .panel { width: 320px; max-width: 90vw; background: #202020; border-radius: 8px; padding: 16px; }
-  .panel h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: 1px; color: #8a8a8a; text-transform: uppercase; }
-  .status { font-size: 12px; color: #7a7a7a; margin-bottom: 12px; font-family: ui-monospace, monospace; }
-  .mate-banner { display: none; padding: 12px; margin-bottom: 12px; background: #3a1818; border: 1px solid #d43a3a; border-radius: 6px; text-align: center; font-weight: 700; color: #ff8888; letter-spacing: 1px; }
-  .mate-banner.on { display: block; }
-  .suggestion { padding: 10px 12px; margin-bottom: 8px; background: #2a2a2a; border-left: 3px solid #4a8a5a; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 14px; }
-  .suggestion.mate { border-left-color: #d43a3a; background: #2e1e1e; }
-  .suggestion .line { color: #777; font-size: 11px; margin-top: 5px; line-height: 1.5; }
-  .suggestion .score { float: right; color: #a8c8a8; font-weight: 600; }
-  .suggestion.mate .score { color: #e07070; }
-  .controls { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
-  .controls button { background: #333; color: #ddd; border: 1px solid #444; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-  .controls button:hover { background: #3e3e3e; }
-  .move-input { margin-top: 12px; display: flex; gap: 8px; }
-  .move-input input { flex: 1; background: #111; border: 1px solid #444; color: #eee; padding: 8px 10px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 13px; }
-  .move-input button { background: #4a8a5a; color: #fff; border: none; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-  .highlight-best { box-shadow: inset 0 0 0 3px #4a8a5a !important; }
-  .highlight-mate { box-shadow: inset 0 0 0 3px #d43a3a !important; }
-  .piece-417db { font-size: 47px; line-height: 60px; text-align: center; }
-  .piece-417db.white-piece { color: #f0f0f0; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
-  .piece-417db.black-piece { color: #1a1a1a; text-shadow: 1px 1px 0 #888, -1px -1px 0 #888, 1px -1px 0 #888, -1px 1px 0 #888; }
+  :root{--bg:#0f1116;--panel:#171a22;--gold:#d4af37;--gold2:#f0d878;--line:#2a2f3a;--text:#e8ecf1;--muted:#8b93a5;--ok:#3ddc84;--warn:#ff9f43;--bad:#ff5d5d;--blue:#5aa9ff}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1b2030,var(--bg) 60%);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+  h1{background:linear-gradient(90deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;margin:0 0 4px;font-size:1.5rem}
+  .sub{color:var(--muted);font-size:.85rem;margin-bottom:18px;text-align:center}
+  .wrap{display:grid;grid-template-columns:auto 380px;gap:20px;align-items:start;max-width:1060px;width:100%}
+  @media(max-width:880px){.wrap{grid-template-columns:1fr}}
+  #board{width:min(72vw,480px);max-width:480px;border-radius:10px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.55),0 0 0 2px var(--line)}
+  .white-1e1d7{background:#e9edf2!important;color:#6b7280!important}
+  .black-3c85d{background:#5b6472!important;color:#e9edf2!important}
+  .highlight-from{box-shadow:inset 0 0 0 4px var(--gold)!important}
+  .highlight-to{box-shadow:inset 0 0 0 4px var(--ok)!important}
+  .highlight-hint{box-shadow:inset 0 0 0 4px var(--warn)!important}
+  .check-king{box-shadow:inset 0 0 0 4px var(--bad)!important}
+  .panel{background:linear-gradient(180deg,#1a1e28,#141821);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.4);margin-bottom:14px}
+  .panel h2{font-size:.85rem;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin:0 0 10px}
+  .status{padding:10px 12px;border-radius:10px;background:#0e1118;border:1px solid var(--line);font-size:.85rem;margin-bottom:10px;min-height:42px;display:flex;align-items:center}
+  .status.ok{border-color:var(--ok)}.status.warn{border-color:var(--warn)}.status.bad{border-color:var(--bad)}.status.blue{border-color:var(--blue)}
+  .quality-box{padding:12px;border-radius:10px;background:#0e1118;border:1px solid var(--line);margin-bottom:10px;display:flex;align-items:center;gap:10px;min-height:56px}
+  .badge{font-weight:800;font-size:.78rem;padding:5px 10px;border-radius:20px;color:#0f1116;white-space:nowrap}
+  .desc{font-size:.76rem;color:var(--muted);line-height:1.35}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  button{cursor:pointer;border:none;border-radius:10px;padding:10px;font-weight:700;font-size:.8rem;color:#0f1116;background:linear-gradient(180deg,var(--gold2),var(--gold));transition:.15s}
+  button:hover{filter:brightness(1.1);transform:translateY(-1px)}
+  button.ghost{background:#222836;color:var(--text);border:1px solid var(--line)}
+  button.full{grid-column:1/-1}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .eval-bar{height:14px;border-radius:8px;background:#0e1118;border:1px solid var(--line);overflow:hidden;margin-bottom:10px;position:relative}
+  .eval-fill{height:100%;background:linear-gradient(90deg,#e9edf2,#d4af37);transition:width .25s}
+  .eval-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#0f1116}
+  .log{max-height:200px;overflow:auto;font-family:ui-monospace,monospace;font-size:.76rem;background:#0e1118;border:1px solid var(--line);border-radius:10px;padding:8px}
+  .log div{padding:4px;border-bottom:1px dashed #1f2430;display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .log div:last-child{border-bottom:none}
+  .log .mv{color:var(--gold2)}
+  .log .ev{color:var(--muted);font-size:.7rem}
+  .log .q{font-size:.62rem;padding:2px 6px;border-radius:10px;font-weight:800;color:#0f1116}
+  .log .blunder{background:rgba(255,93,93,.12);border-left:3px solid var(--bad)}
+  .log .best{background:rgba(61,220,132,.10);border-left:3px solid var(--ok)}
+  .engine-tag{font-size:.7rem;padding:3px 8px;border-radius:10px;background:#0e1118;border:1px solid var(--line);color:var(--muted)}
+  textarea,input[type=text]{width:100%;background:#0e1118;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:9px;font-family:ui-monospace,monospace;font-size:.78rem}
+  .summary{background:#0e1118;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.78rem;line-height:1.6;margin-top:8px}
+  .val{color:var(--gold2);font-weight:700}
 </style>
 </head>
 <body>
-<div id="board"></div>
-<div class="panel">
-  <h2>Advisor</h2>
-  <div class="mate-banner" id="mate-banner">MATE FOUND</div>
-  <div class="status" id="status">ready</div>
-  <div id="suggestions"></div>
-  <div class="controls">
-    <button id="btn-flip">Flip</button>
-    <button id="btn-undo">Undo</button>
-    <button id="btn-reset">Reset</button>
-    <button id="btn-depth">Depth: 3</button>
-  </div>
-  <div class="move-input">
-    <input id="move-input" type="text" placeholder="langkah manual, mis. e2e4" autocomplete="off">
-    <button id="btn-move">Go</button>
+<h1>♟️ Chess Analysis</h1>
+<div class="sub">Stockfish engine • Klasifikasi langkah • Review game</div>
+<div class="wrap">
+  <div id="board"></div>
+  <div>
+    <div class="panel">
+      <h2>🎯 Status <span id="engineTag" class="engine-tag">Loading engine...</span></h2>
+      <div id="status" class="status ok">Giliran: Putih</div>
+      <div class="eval-bar"><div id="evalFill" class="eval-fill" style="width:50%"></div><div id="evalLabel" class="eval-label">0.00</div></div>
+      <h2 style="margin-top:12px">🏷️ Kualitas Langkah</h2>
+      <div id="qualityBox" class="quality-box"><span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Gerakkan bidak.</span></div>
+      <div class="btns">
+        <button id="btnHint" class="full">💡 Best Move</button>
+        <button id="btnMate" class="full ghost">🎯 Cari Skakmat</button>
+        <button id="btnUndo" class="ghost">↩️ Undo</button>
+        <button id="btnFlip" class="ghost">🔄 Flip</button>
+        <button id="btnReset" class="full ghost">♻️ Reset</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>📥 Import</h2>
+      <textarea id="pgnInput" rows="2" placeholder="PGN..."></textarea>
+      <div class="btns" style="margin-top:8px"><button id="btnLoadPgn" class="full">📥 Load PGN</button></div>
+      <input id="fenInput" type="text" placeholder="FEN..." />
+      <div class="btns" style="margin-top:8px"><button id="btnLoadFen" class="full ghost">📥 Load FEN</button></div>
+    </div>
+    <div class="panel">
+      <h2>🔍 Review</h2>
+      <div class="btns"><button id="btnReview" class="full">🔍 Review Game</button></div>
+      <div id="reviewSummary"></div>
+    </div>
+    <div class="panel">
+      <h2>📜 Riwayat</h2>
+      <div id="log" class="log"></div>
+    </div>
   </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
 <script>
-var game = new Chess();
-var board = null;
-var currentDepth = 3;
-var thinking = false;
-var $status = document.getElementById('status');
-var $suggestions = document.getElementById('suggestions');
-var $mateBanner = document.getElementById('mate-banner');
-var PIECE_VALUE = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
-var MATE_SCORE = 1000000;
-var MATE_THRESHOLD = 999000;
+/* ================== SETUP ================== */
+const game = new Chess();
+const board = Chessboard('board', {
+  draggable: true, position: 'start',
+  pieceTheme: 'https://unpkg.com/chessboardjs@1.0.0/www/img/chesspieces/wikipedia/{piece}.png',
+  onDragStart, onDrop, onSnapEnd: () => board.position(game.fen())
+});
+const $status = document.getElementById('status');
+const $log = document.getElementById('log');
+const $evalFill = document.getElementById('evalFill');
+const $evalLabel = document.getElementById('evalLabel');
+const $qualityBox = document.getElementById('qualityBox');
+const $reviewSummary = document.getElementById('reviewSummary');
+const $engineTag = document.getElementById('engineTag');
+let selectedSquare = null;
 
-var PST = {
-  p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
-  n: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
-  b: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
-  r: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
-  q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
-  k: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
+/* ================== KUALITAS ================== */
+const QUALITY = {
+  brilliant:{label:'Brilliant',color:'#26c2a3',emoji:'!!',desc:'Langkah terbaik + pengorbanan/taktik.'},
+  great:{label:'Great',color:'#5aa9ff',emoji:'!',desc:'Sangat kuat, hampir best.'},
+  best:{label:'Best',color:'#3ddc84',emoji:'★',desc:'Langkah terbaik engine.'},
+  excellent:{label:'Excellent',color:'#8bd17c',emoji:'✓',desc:'Sangat bagus.'},
+  good:{label:'Good',color:'#c8d67a',emoji:'·',desc:'Langkah wajar.'},
+  inaccuracy:{label:'Inaccuracy',color:'#f0c808',emoji:'?!',desc:'Kurang akurat.'},
+  mistake:{label:'Mistake',color:'#ff9f43',emoji:'?',desc:'Kesalahan nyata.'},
+  blunder:{label:'Blunder',color:'#ff5d5d',emoji:'??',desc:'Kesalahan fatal.'}
 };
-
-var UNICODE_PIECES = {
-  wK: '\u2654', wQ: '\u2655', wR: '\u2656', wB: '\u2657', wN: '\u2658', wP: '\u2659',
-  bK: '\u265A', bQ: '\u265B', bR: '\u265C', bB: '\u265D', bN: '\u265E', bP: '\u265F'
-};
-
-function pieceRenderer(piece) {
-  var isWhite = piece.charAt(0) === 'w';
-  return '<span class="piece-417db ' + (isWhite ? 'white-piece' : 'black-piece') + '">' + UNICODE_PIECES[piece] + '</span>';
+function showQuality(q,extra){
+  const d=QUALITY[q];
+  $qualityBox.innerHTML=`<span class="badge" style="background:${d.color}">${d.emoji} ${d.label}</span><span class="desc">${d.desc}${extra?'<br><span style="color:#8b93a5">'+extra+'</span>':''}</span>`;
+}
+function classify(beforeScore, afterScore, bestVal, playedIsBest, isSacrifice, isMate){
+  if (isMate && playedIsBest) return 'best';
+  const delta = Math.abs(afterScore - bestVal);
+  if (playedIsBest){ if (isSacrifice) return 'brilliant'; return 'best'; }
+  if (delta <= 10){ if (isSacrifice) return 'brilliant'; return 'great'; }
+  if (delta <= 30) return 'excellent';
+  if (delta <= 80) return 'good';
+  if (delta <= 150) return 'inaccuracy';
+  if (delta <= 300) return 'mistake';
+  return 'blunder';
 }
 
-function setStatus(t) { $status.textContent = t; }
+/* ================== UI ================== */
+function squareEl(sq){return document.querySelector('.square-'+sq);}
+function clearHighlights(){document.querySelectorAll('.highlight-from,.highlight-to,.highlight-hint,.check-king').forEach(el=>el.classList.remove('highlight-from','highlight-to','highlight-hint','check-king'));}
+function highlight(sq,cls){const el=squareEl(sq);if(el)el.classList.add(cls);}
+function setStatus(t,type='ok'){$status.className='status '+type;$status.textContent=t;}
+const moveEvals=[];
+function renderLog(){
+  const h=game.history({verbose:true});
+  if(!h.length){$log.innerHTML='<div style="color:#8b93a5">Belum ada langkah.</div>';return;}
+  $log.innerHTML=h.map((m,i)=>{
+    const n=Math.floor(i/2)+1, side=i%2===0?'Putih':'Hitam', rec=moveEvals[i];
+    let cls='';
+    if(rec&&(rec.quality==='blunder'||rec.quality==='mistake'))cls='blunder';
+    else if(rec&&(rec.quality==='best'||rec.quality==='brilliant'||rec.quality==='great'))cls='best';
+    const q=rec&&QUALITY[rec.quality]?`<span class="q" style="background:${QUALITY[rec.quality].color}">${QUALITY[rec.quality].emoji}</span>`:'';
+    const ev=rec?`<span class="ev">${rec.eval>0?'+':''}${(rec.eval/100).toFixed(2)}</span>`:'';
+    return `<div class="${cls}"><span><span style="color:#8b93a5">${n}. ${side}</span> <span class="mv">${m.san}</span></span><span style="display:flex;gap:6px;align-items:center">${q}${ev}</span></div>`;
+  }).join('');
+  $log.scrollTop=$log.scrollHeight;
+}
 
-function evaluateBoard(g) {
-  var score = 0;
-  var b = g.board();
-  for (var r = 0; r < 8; r++) {
-    for (var c = 0; c < 8; c++) {
-      var sq = b[r][c];
-      if (!sq) continue;
-      var idx = (sq.color === 'w' ? r : 7 - r) * 8 + c;
-      var val = PIECE_VALUE[sq.type] + PST[sq.type][idx];
-      score += (sq.color === 'w' ? 1 : -1) * val;
+/* ================== ENGINE MANAGER ================== */
+const ENGINE = {
+  type: 'fallback', // 'stockfish' | 'fallback'
+  sf: null,
+  ready: false,
+  init(){
+    try{
+      // Coba load Stockfish 16 WASM dari CDN
+      const worker = new Worker('https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js');
+      worker.onmessage = (e)=>{
+        const line = e.data;
+        if (typeof line !== 'string') return;
+        if (line === 'uciok'){ this.ready = true; this.type='stockfish'; $engineTag.textContent='Stockfish ✓'; $engineTag.style.color='var(--ok)'; }
+      };
+      worker.onerror = ()=>{ this.useFallback(); };
+      worker.postMessage('uci');
+      this.sf = worker;
+      // timeout 5 detik, kalau gagal pakai fallback
+      setTimeout(()=>{ if (!this.ready) this.useFallback(); }, 5000);
+    }catch(e){ this.useFallback(); }
+  },
+  useFallback(){
+    if (this.type==='stockfish') return;
+    this.type='fallback';
+    $engineTag.textContent='Minimax (fallback)';
+    $engineTag.style.color='var(--warn)';
+  },
+  // Minta best move + eval dari Stockfish. Return Promise<{best, eval}>
+  async analyze(fen, depth=12){
+    if (this.type==='stockfish' && this.ready){
+      return this._sfAnalyze(fen, depth);
     }
+    return this._fallbackAnalyze(fen, depth);
+  },
+  _sfAnalyze(fen, depth){
+    return new Promise((resolve)=>{
+      const worker = this.sf;
+      let bestMove=null, lastEval=0;
+      const handler = (e)=>{
+        const line=e.data;
+        if (typeof line!=='string') return;
+        if (line.startsWith('info') && line.includes('score cp')){
+          const m=line.match(/score cp (-?\d+)/); if(m) lastEval=parseInt(m[1]);
+        }
+        if (line.startsWith('info') && line.includes('score mate')){
+          const m=line.match(/score mate (-?\d+)/); if(m) lastEval=parseInt(m[1])>0?99999:-99999;
+        }
+        if (line.startsWith('bestmove')){
+          bestMove=line.split(' ')[1];
+          worker.removeEventListener('message',handler);
+          resolve({best:bestMove, eval:lastEval});
+        }
+      };
+      worker.addEventListener('message',handler);
+      worker.postMessage('position fen '+fen);
+      worker.postMessage('go depth '+depth);
+      setTimeout(()=>{ try{worker.removeEventListener('message',handler);}catch(e){} resolve({best:bestMove, eval:lastEval}); }, 8000);
+    });
+  },
+  _fallbackAnalyze(fen, depth){
+    const g = new Chess(fen);
+    const {move, val} = evalBestMove(g, Math.min(depth,3));
+    return Promise.resolve({best: move?move.from+move.to:null, eval: val});
   }
-  return g.turn() === 'w' ? score : -score;
-}
+};
 
-function search(g, depth, alpha, beta, ply) {
-  if (g.in_checkmate()) return -MATE_SCORE + ply;
-  if (g.in_draw() || g.in_stalemate() || g.insufficient_material()) return 0;
-  if (depth === 0) return quiesce(g, alpha, beta, ply);
-  var moves = g.moves({ verbose: true });
-  orderMoves(moves);
-  var best = -Infinity;
-  for (var i = 0; i < moves.length; i++) {
-    g.move({ from: moves[i].from, to: moves[i].to, promotion: moves[i].promotion });
-    var s = -search(g, depth - 1, -beta, -alpha, ply + 1);
-    g.undo();
-    if (s > best) best = s;
-    if (best > alpha) alpha = best;
-    if (alpha >= beta) break;
+/* ================== MINIMAX FALLBACK ================== */
+const PIECE_VAL={p:100,n:320,b:330,r:500,q:900,k:20000};
+const PST={p:[0,0,0,0,0,0,0,0,50,50,50,50,50,50,50,50,10,10,20,30,30,20,10,10,5,5,10,25,25,10,5,5,0,0,0,20,20,0,0,0,5,-5,-10,0,0,-10,-5,5,5,10,10,-20,-20,10,10,5,0,0,0,0,0,0,0,0],n:[-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],b:[-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,10,10,5,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],r:[0,0,0,0,0,0,0,0,5,10,10,10,10,10,10,5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,0,0,0,5,5,0,0,0],q:[-20,-10,-10,-5,-5,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,5,5,5,0,-10,-5,0,5,5,5,5,0,-5,0,0,5,5,5,5,0,-5,-10,5,5,5,5,5,0,-10,-10,0,5,0,0,0,0,-10,-20,-10,-10,-5,-5,-10,-10,-20],k:[-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-20,-30,-30,-40,-40,-30,-30,-20,-10,-20,-20,-20,-20,-20,-20,-10,20,20,0,0,0,0,20,20,20,30,10,0,0,10,30,20]};
+function evaluateBoard(g){
+  if(g.in_checkmate())return g.turn()==='w'?-99999:99999;
+  if(g.in_draw()||g.in_stalemate())return 0;
+  let score=0;const b=g.board();
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=b[r][c];if(!p)continue;
+    const idx=r*8+c, pstIdx=p.color==='w'?idx:(7-r)*8+c;
+    const pst=PST[p.type]?PST[p.type][pstIdx]:0;
+    const v=(PIECE_VAL[p.type]||0)+pst;
+    score+=(p.color==='w'?1:-1)*v;
   }
+  return score;
+}
+function negamax(g,depth,alpha,beta,color){
+  if(depth===0||g.game_over())return color*evaluateBoard(g);
+  const moves=g.moves({verbose:true});
+  moves.sort((a,b)=>(b.captured?PIECE_VAL[b.captured]:0)-(a.captured?PIECE_VAL[a.captured]:0));
+  let best=-Infinity;
+  for(const m of moves){g.move(m);const val=-negamax(g,depth-1,-beta,-alpha,-color);g.undo();if(val>best)best=val;if(best>alpha)alpha=best;if(alpha>=beta)break;}
   return best;
 }
+function evalBestMove(g,depth=3){
+  const moves=g.moves({verbose:true});
+  if(!moves.length)return{move:null,val:0};
+  let best=null,bestVal=-Infinity;const turn=g.turn()==='w'?1:-1;
+  for(const m of moves){g.move(m);const val=-negamax(g,depth-1,-Infinity,Infinity,-turn);g.undo();if(val>bestVal){bestVal=val;best=m;}}
+  return{move:best,val:bestVal};
+}
 
-function quiesce(g, alpha, beta, ply) {
-  if (g.in_checkmate()) return -MATE_SCORE + ply;
-  if (g.in_draw() || g.in_stalemate() || g.insufficient_material()) return 0;
-  var stand = evaluateBoard(g);
-  if (stand >= beta) return beta;
-  if (stand > alpha) alpha = stand;
-  var caps = g.moves({ verbose: true }).filter(function (m) {
-    return m.flags.indexOf('c') !== -1 || m.flags.indexOf('e') !== -1;
-  });
-  orderMoves(caps);
-  for (var i = 0; i < caps.length; i++) {
-    g.move({ from: caps[i].from, to: caps[i].to, promotion: caps[i].promotion });
-    var s = -quiesce(g, -beta, -alpha, ply + 1);
-    g.undo();
-    if (s >= beta) return beta;
-    if (s > alpha) alpha = s;
+/* ================== RENDER ================== */
+function updateEvalBar(score){
+  const clamped=Math.max(-1000,Math.min(1000,score));
+  const pct=50+(clamped/1000)*50;
+  $evalFill.style.width=pct+'%';
+  $evalLabel.textContent=(score>0?'+':'')+(score/100).toFixed(2);
+}
+function checkKingHighlight(){
+  if(!game.in_check())return;
+  const turn=game.turn(),b=game.board();
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const p=b[r][c];
+    if(p&&p.type==='k'&&p.color===turn)highlight('abcdefgh'[c]+(8-r),'check-king');
   }
-  return alpha;
+}
+function updateStatus(){
+  if(game.in_checkmate()){const l=game.turn()==='w'?'Putih':'Hitam',w=game.turn()==='w'?'Hitam':'Putih';setStatus(`♛ SKAKMAT! ${w} menang.`,'bad');return;}
+  if(game.in_stalemate()){setStatus('⚖️ Stalemate — seri.','warn');return;}
+  if(game.in_threefold_repetition()){setStatus('⚖️ Threefold — seri.','warn');return;}
+  if(game.insufficient_material()){setStatus('⚖️ Material tidak cukup — seri.','warn');return;}
+  if(game.in_draw()){setStatus('⚖️ Draw.','warn');return;}
+  if(game.in_check()){const t=game.turn()==='w'?'Putih':'Hitam';setStatus(`⚠️ SKAK! Giliran ${t}.`,'warn');}
+  else setStatus(`Giliran: ${game.turn()==='w'?'Putih':'Hitam'}`,'ok');
+}
+function renderAll(){
+  board.position(game.fen(),false);
+  clearHighlights();checkKingHighlight();renderLog();updateStatus();
+  updateEvalBar(evaluateBoard(game));
 }
 
-function orderMoves(moves) {
-  moves.sort(function (a, b) {
-    var av = a.captured ? PIECE_VALUE[a.captured] : 0;
-    var bv = b.captured ? PIECE_VALUE[b.captured] : 0;
-    if (a.promotion) av += 800;
-    if (b.promotion) bv += 800;
-    if (a.san && a.san.indexOf('#') !== -1) av += 5000;
-    if (b.san && b.san.indexOf('#') !== -1) bv += 5000;
-    return bv - av;
+/* ================== INPUT ================== */
+function onDragStart(source,piece){
+  if(game.game_over())return false;
+  if((game.turn()==='w'&&piece.startsWith('b'))||(game.turn()==='b'&&piece.startsWith('w')))return false;
+  selectedSquare=source;clearHighlights();highlight(source,'highlight-from');
+  return true;
+}
+function onDrop(source,target){
+  playAndClassify(source,target).then(mv=>{
+    if(!mv)return;
+    renderAll();highlight(source,'highlight-from');highlight(target,'highlight-to');
   });
 }
-
-function findMateIn1(g) {
-  var moves = g.moves({ verbose: true });
-  for (var i = 0; i < moves.length; i++) {
-    g.move({ from: moves[i].from, to: moves[i].to, promotion: moves[i].promotion });
-    var isMate = g.in_checkmate();
-    g.undo();
-    if (isMate) return moves[i];
+$(document).on('click','.square-55d63',function(){
+  const cls=this.className.split(' ').find(c=>c.startsWith('square-'));
+  if(!cls)return;
+  const sq=cls.replace('square-','');
+  if(!selectedSquare){
+    const p=game.get(sq);if(!p)return;
+    if((game.turn()==='w'&&p.color!=='w')||(game.turn()==='b'&&p.color!=='b'))return;
+    selectedSquare=sq;clearHighlights();highlight(sq,'highlight-from');return;
   }
-  return null;
-}
-
-function findMateIn2(g) {
-  var moves = g.moves({ verbose: true });
-  orderMoves(moves);
-  for (var i = 0; i < moves.length; i++) {
-    g.move({ from: moves[i].from, to: moves[i].to, promotion: moves[i].promotion });
-    if (g.in_checkmate() || g.in_stalemate() || g.in_draw()) { g.undo(); continue; }
-    var replies = g.moves({ verbose: true });
-    var allMate = replies.length > 0;
-    for (var j = 0; j < replies.length; j++) {
-      g.move({ from: replies[j].from, to: replies[j].to, promotion: replies[j].promotion });
-      var mated = g.in_checkmate();
-      g.undo();
-      if (!mated) { allMate = false; break; }
+  if(selectedSquare===sq){selectedSquare=null;clearHighlights();return;}
+  const from=selectedSquare;selectedSquare=null;
+  playAndClassify(from,sq).then(mv=>{
+    if(mv){renderAll();highlight(from,'highlight-from');highlight(sq,'highlight-to');}
+    else{
+      const p=game.get(sq);
+      if(p&&((game.turn()==='w'&&p.color==='w')||(game.turn()==='b'&&p.color==='b'))){selectedSquare=sq;clearHighlights();highlight(sq,'highlight-from');}
+      else{selectedSquare=null;clearHighlights();}
     }
-    g.undo();
-    if (allMate) return moves[i];
-  }
-  return null;
-}
-
-function findBestMoves(g, depth) {
-  var m1 = findMateIn1(g);
-  if (m1) return [{ move: m1, score: MATE_SCORE - 1, mate: 1 }];
-  var m2 = findMateIn2(g);
-  if (m2) return [{ move: m2, score: MATE_SCORE - 3, mate: 2 }];
-  var moves = g.moves({ verbose: true });
-  orderMoves(moves);
-  var results = [];
-  for (var i = 0; i < moves.length; i++) {
-    g.move({ from: moves[i].from, to: moves[i].to, promotion: moves[i].promotion });
-    var s = -search(g, depth - 1, -Infinity, Infinity, 1);
-    g.undo();
-    results.push({ move: moves[i], score: s, mate: null });
-  }
-  results.sort(function (a, b) { return b.score - a.score; });
-  return results.slice(0, 3);
-}
-
-function highlightMove(from, to, isMate) {
-  var els = document.querySelectorAll('.highlight-best, .highlight-mate');
-  for (var i = 0; i < els.length; i++) els[i].classList.remove('highlight-best', 'highlight-mate');
-  var cls = isMate ? 'highlight-mate' : 'highlight-best';
-  [from, to].forEach(function (sq) {
-    var el = document.querySelector('.square-' + sq);
-    if (el) el.classList.add(cls);
   });
-}
-
-function renderResults(results) {
-  $suggestions.innerHTML = '';
-  var hasMate = results.length > 0 && (results[0].mate !== null || results[0].score > MATE_THRESHOLD);
-  $mateBanner.className = 'mate-banner' + (hasMate ? ' on' : '');
-  if (hasMate) {
-    var n = results[0].mate || Math.ceil((MATE_SCORE - results[0].score) / 2);
-    $mateBanner.textContent = 'MATE IN ' + n;
-  }
-  results.forEach(function (r, idx) {
-    var mate = r.mate;
-    var cp = r.score;
-    if (mate === null && r.score > MATE_THRESHOLD) mate = Math.ceil((MATE_SCORE - r.score) / 2);
-    else if (mate === null && r.score < -MATE_THRESHOLD) mate = -Math.ceil((MATE_SCORE + r.score) / 2);
-    else if (mate === null) mate = null;
-    if (mate !== null) cp = null;
-    var div = document.createElement('div');
-    div.className = 'suggestion' + (mate !== null ? ' mate' : '');
-    var scoreText = mate !== null ? 'M' + Math.abs(mate) : ((cp >= 0 ? '+' : '') + (cp / 100).toFixed(2));
-    div.innerHTML = '<span class="score">' + scoreText + '</span>#' + (idx + 1) + ' ' + r.move.san + '<div class="line">' + r.move.from + '\u2192' + r.move.to + '</div>';
-    $suggestions.appendChild(div);
-  });
-  if (results[0]) {
-    var isMate0 = results[0].mate !== null || results[0].score > MATE_THRESHOLD;
-    highlightMove(results[0].move.from, results[0].move.to, isMate0);
-  }
-}
-
-function runAnalysis() {
-  if (thinking) return;
-  thinking = true;
-  setStatus('thinking depth ' + currentDepth + '\u2026');
-  setTimeout(function () {
-    var t0 = performance.now();
-    var results = findBestMoves(game, currentDepth);
-    var elapsed = Math.round(performance.now() - t0);
-    renderResults(results);
-    setStatus('ready \u00b7 depth ' + currentDepth + ' \u00b7 ' + elapsed + 'ms');
-    thinking = false;
-  }, 20);
-}
-
-function onDragStart(source, piece) {
-  if (game.game_over()) return false;
-  if ((game.turn() === 'w' && piece.indexOf('b') === 0) || (game.turn() === 'b' && piece.indexOf('w') === 0)) return false;
-}
-
-function onDrop(source, target) {
-  var move = game.move({ from: source, to: target, promotion: 'q' });
-  if (move === null) return 'snapback';
-  board.position(game.fen());
-  runAnalysis();
-}
-
-function onSnapEnd() { board.position(game.fen()); }
-
-board = Chessboard('board', {
-  draggable: true,
-  position: 'start',
-  onDragStart: onDragStart,
-  onDrop: onDrop,
-  onSnapEnd: onSnapEnd,
-  pieceTheme: pieceRenderer
 });
 
-document.getElementById('btn-flip').onclick = function () { board.flip(); };
-document.getElementById('btn-undo').onclick = function () {
-  game.undo();
-  board.position(game.fen());
-  runAnalysis();
-};
-document.getElementById('btn-reset').onclick = function () {
-  game = new Chess();
-  board.position('start');
-  $suggestions.innerHTML = '';
-  $mateBanner.className = 'mate-banner';
-  runAnalysis();
-};
-document.getElementById('btn-depth').onclick = function (e) {
-  currentDepth = currentDepth === 3 ? 4 : currentDepth === 4 ? 2 : 3;
-  e.target.textContent = 'Depth: ' + currentDepth;
-  runAnalysis();
-};
-
-function applyManualMove() {
-  var input = document.getElementById('move-input');
-  var txt = input.value.trim().toLowerCase();
-  if (!txt) return;
-  var m = game.move(txt, { sloppy: true });
-  if (m === null) {
-    setStatus('langkah ilegal: ' + txt);
-    return;
-  }
-  input.value = '';
-  board.position(game.fen());
-  runAnalysis();
+async function playAndClassify(from,to){
+  try{
+    const beforeFen=game.fen();
+    const beforeScore=evaluateBoard(game);
+    const analysis=await ENGINE.analyze(beforeFen, 12);
+    let mv;
+    try{mv=game.move({from,to,promotion:'q'});}catch(e){return null;}
+    if(!mv)return null;
+    const afterScore=evaluateBoard(game);
+    const playedUci=mv.from+mv.to;
+    const playedIsBest=analysis.best===playedUci;
+    const isMate=game.in_checkmate();
+    let isSacrifice=false;
+    if(playedIsBest){
+      const sim=new Chess(beforeFen);
+      const matBefore=materialCount(sim,mv.color);
+      const matAfter=materialCount(game,mv.color);
+      if(matAfter<matBefore&&Math.abs(afterScore)>50)isSacrifice=true;
+    }
+    let q;
+    if(isMate)q='best';
+    else q=classify(beforeScore,afterScore,analysis.eval,playedIsBest,isSacrifice,isMate);
+    const extra=analysis.best&&!playedIsBest?`Best: ${analysis.best}`:'';
+    showQuality(q,extra);
+    moveEvals.push({san:mv.san,eval:afterScore,quality:q});
+    return mv;
+  }catch(e){return null;}
+}
+function materialCount(g,color){
+  let v=0;g.board().forEach(row=>row.forEach(p=>{if(p&&p.color===color&&p.type!=='k')v+=PIECE_VAL[p.type]||0;}));
+  return v;
 }
 
-document.getElementById('btn-move').onclick = applyManualMove;
-document.getElementById('move-input').addEventListener('keydown', function (e) {
-  if (e.key === 'Enter') applyManualMove();
+/* ================== BUTTONS ================== */
+document.getElementById('btnHint').addEventListener('click',async()=>{
+  if(game.game_over())return;
+  setStatus('🧠 Menganalisis...','blue');
+  const analysis=await ENGINE.analyze(game.fen(),14);
+  if(!analysis.best){setStatus('Tidak ada langkah.','bad');return;}
+  clearHighlights();
+  const from=analysis.best.slice(0,2),to=analysis.best.slice(2,4);
+  highlight(from,'highlight-from');highlight(to,'highlight-hint');
+  setStatus(`💡 Best: ${analysis.best} (eval ${(analysis.eval/100).toFixed(2)})`,'ok');
+});
+document.getElementById('btnMate').addEventListener('click',()=>{
+  if(game.game_over())return;
+  const moves=game.moves({verbose:true});
+  for(const m of moves){game.move(m);const mate=game.in_checkmate();game.undo();if(mate){clearHighlights();highlight(m.from,'highlight-from');highlight(m.to,'highlight-hint');setStatus(`🎯 SKAKMAT! ${m.san}`,'bad');return;}}
+  setStatus('❌ Tidak ada skakmat 1 langkah.','warn');
+});
+document.getElementById('btnUndo').addEventListener('click',()=>{
+  game.undo();moveEvals.pop();selectedSquare=null;renderAll();
+  $qualityBox.innerHTML=`<span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Undo.</span>`;
+});
+document.getElementById('btnFlip').addEventListener('click',()=>board.flip());
+document.getElementById('btnReset').addEventListener('click',()=>{
+  game.reset();moveEvals.length=0;selectedSquare=null;board.position('start',false);renderAll();$reviewSummary.innerHTML='';
+  $qualityBox.innerHTML=`<span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Reset.</span>`;
 });
 
-runAnalysis();
+/* ================== IMPORT ================== */
+document.getElementById('btnLoadPgn').addEventListener('click',()=>{
+  const pgn=document.getElementById('pgnInput').value.trim();
+  if(!pgn){setStatus('⚠️ PGN kosong.','warn');return;}
+  try{game.load_pgn(pgn);moveEvals.length=0;game.history({verbose:true}).forEach(m=>moveEvals.push({san:m.san,eval:0,quality:null}));selectedSquare=null;renderAll();setStatus('✅ PGN dimuat.','ok');}
+  catch(e){setStatus('❌ PGN invalid.','bad');}
+});
+document.getElementById('btnLoadFen').addEventListener('click',()=>{
+  const fen=document.getElementById('fenInput').value.trim();
+  if(!fen){setStatus('⚠️ FEN kosong.','warn');return;}
+  try{game.load(fen);moveEvals.length=0;selectedSquare=null;renderAll();setStatus('✅ FEN dimuat.','ok');}
+  catch(e){setStatus('❌ FEN invalid.','bad');}
+});
+
+/* ================== REVIEW ================== */
+document.getElementById('btnReview').addEventListener('click',async()=>{
+  const history=game.history({verbose:true});
+  if(!history.length){setStatus('⚠️ Belum ada langkah.','warn');return;}
+  setStatus('🔍 Review...','blue');
+  const replay=new Chess();
+  const counts={brilliant:0,great:0,best:0,excellent:0,good:0,inaccuracy:0,mistake:0,blunder:0};
+  let totalErr=0;const blunderList=[];
+  for(let i=0;i<history.length;i++){
+    const m=history[i];
+    const beforeFen=replay.fen(),beforeScore=evaluateBoard(replay);
+    const analysis=await ENGINE.analyze(beforeFen,10);
+    replay.move(m.san);
+    const afterScore=evaluateBoard(replay);
+    const playedIsBest=analysis.best===m.from+m.to;
+    const delta=Math.abs(afterScore-analysis.eval);
+    let q=classify(beforeScore,afterScore,analysis.eval,playedIsBest,false,replay.in_checkmate());
+    if(replay.in_checkmate())q='best';
+    counts[q]=(counts[q]||0)+1;totalErr+=delta;
+    moveEvals[i]={san:m.san,eval:afterScore,quality:q};
+    if(q==='blunder'||q==='mistake')blunderList.push({n:Math.floor(i/2)+1,side:i%2===0?'P':'H',san:m.san,delta,best:analysis.best});
+  }
+  renderLog();
+  const accuracy=Math.max(0,100-(totalErr/history.length)/10).toFixed(1);
+  const rows=Object.entries(counts).filter(([k,v])=>v>0).map(([k,v])=>`<div>${QUALITY[k].emoji} ${QUALITY[k].label}: <span class="val">${v}</span></div>`).join('');
+  const blunders=blunderList.slice(0,6).map(b=>`<div>• ${b.n}${b.side}: <b>${b.san}</b> (rugi ${(b.delta/100).toFixed(2)})</div>`).join('')||'<div>Tidak ada blunder besar 🎉</div>';
+  $reviewSummary.innerHTML=`<div class="summary"><div>📊 Akurasi: <span class="val">${accuracy}%</span></div><div style="margin-top:6px">${rows}</div><div style="margin-top:8px;color:#8b93a5">Blunder:</div><div style="font-family:ui-monospace,monospace;font-size:.72rem">${blunders}</div></div>`;
+  setStatus(`✅ Review selesai.`,'ok');
+});
+
+/* ================== INIT ================== */
+ENGINE.init();
+renderAll();
 </script>
 </body>
 </html>
