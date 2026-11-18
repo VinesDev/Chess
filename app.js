@@ -1,8 +1,18 @@
 /* ========== CEK LIBRARY ========== */
-if (typeof Chessboard === 'undefined' || typeof Chess === 'undefined') {
-  document.getElementById('status').textContent =
-    '❌ Library gagal load. Cek koneksi / CDN.';
-  document.getElementById('status').className = 'status bad';
+const libStatus = {
+  jquery: typeof jQuery !== 'undefined',
+  chess: typeof Chess !== 'undefined',
+  chessboard: typeof Chessboard !== 'undefined'
+};
+
+if (!libStatus.jquery || !libStatus.chess || !libStatus.chessboard) {
+  const msg = '❌ Gagal load: ' +
+    (!libStatus.jquery ? 'jQuery ' : '') +
+    (!libStatus.chess ? 'chess.js ' : '') +
+    (!libStatus.chessboard ? 'chessboardjs' : '');
+  const el = document.getElementById('status');
+  if (el) { el.textContent = msg; el.className = 'status bad'; }
+  console.error(msg, libStatus);
 } else {
   init();
 }
@@ -13,7 +23,7 @@ function init() {
   const board = Chessboard('board', {
     draggable: true,
     position: 'start',
-    pieceTheme: 'https://unpkg.com/chessboardjs@1.0.0/www/img/chesspieces/wikipedia/{piece}.png',
+    pieceTheme: 'https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png',
     onDragStart,
     onDrop,
     onSnapEnd: () => board.position(game.fen())
@@ -222,7 +232,6 @@ function init() {
     try {
       const fenBefore = game.fen();
       const mover = game.turn();
-      const scoreBefore = evaluateBoard(game);
       const { move: bestMv, val: bestVal } = evalBestMove(new Chess(fenBefore), 3);
 
       let mv;
