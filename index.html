@@ -5,414 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>♟️ Chess Analysis — VinesDev</title>
 <link rel="stylesheet" href="https://unpkg.com/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
-<script src="https://unpkg.com/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js"></script>
-<style>
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;font-family:system-ui,sans-serif;background:#0f1116;color:#e8ecf1;display:flex;flex-direction:column;align-items:center;padding:20px 14px}
-h1{background:linear-gradient(90deg,#d4af37,#f0d878);-webkit-background-clip:text;background-clip:text;color:transparent;margin:0 0 4px;font-size:1.4rem}
-.sub{color:#8b93a5;font-size:.8rem;margin-bottom:16px}
-.wrap{display:grid;grid-template-columns:auto 360px;gap:18px;align-items:start;max-width:1000px;width:100%}
-@media(max-width:860px){.wrap{grid-template-columns:1fr}}
-#board{width:min(72vw,460px);max-width:460px;border-radius:10px;overflow:hidden;box-shadow:0 0 0 2px #2a2f3a}
-.white-1e1d7{background:#e9edf2!important;color:#6b7280!important}
-.black-3c85d{background:#5b6472!important;color:#e8ecf1!important}
-.hl-from{box-shadow:inset 0 0 0 4px #d4af37!important}
-.hl-to{box-shadow:inset 0 0 0 4px #3ddc84!important}
-.hl-hint{box-shadow:inset 0 0 0 4px #ff9f43!important}
-.hl-check{box-shadow:inset 0 0 0 4px #ff5d5d!important}
-.panel{background:#171a22;border:1px solid #2a2f3a;border-radius:12px;padding:14px;margin-bottom:12px}
-.panel h2{font-size:.8rem;letter-spacing:1px;text-transform:uppercase;color:#d4af37;margin:0 0 8px}
-.status{padding:10px;border-radius:8px;background:#0e1118;border:1px solid #2a2f3a;font-size:.82rem;margin-bottom:8px;min-height:40px;display:flex;align-items:center}
-.status.ok{border-color:#3ddc84}.status.warn{border-color:#ff9f43}.status.bad{border-color:#ff5d5d}.status.blue{border-color:#5aa9ff}
-.qbox{padding:10px;border-radius:8px;background:#0e1118;border:1px solid #2a2f3a;margin-bottom:10px;display:flex;align-items:center;gap:8px;min-height:50px}
-.badge{font-weight:800;font-size:.72rem;padding:4px 9px;border-radius:20px;color:#0f1116;white-space:nowrap}
-.desc{font-size:.72rem;color:#8b93a5;line-height:1.35}
-.btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
-button{cursor:pointer;border:none;border-radius:8px;padding:9px;font-weight:700;font-size:.76rem;color:#0f1116;background:linear-gradient(180deg,#f0d878,#d4af37);transition:.15s}
-button:hover{filter:brightness(1.1)}
-button.ghost{background:#222836;color:#e8ecf1;border:1px solid #2a2f3a}
-button.full{grid-column:1/-1}
-.eval-bar{height:12px;border-radius:6px;background:#0e1118;border:1px solid #2a2f3a;overflow:hidden;margin-bottom:8px;position:relative}
-.eval-fill{height:100%;background:linear-gradient(90deg,#e9edf2,#d4af37);transition:width .25s}
-.eval-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.64rem;font-weight:700;color:#0f1116}
-.log{max-height:180px;overflow:auto;font-family:ui-monospace,monospace;font-size:.72rem;background:#0e1118;border:1px solid #2a2f3a;border-radius:8px;padding:6px}
-.log div{padding:3px;border-bottom:1px dashed #1f2430;display:flex;justify-content:space-between;align-items:center}
-.log div:last-child{border-bottom:none}
-.log .mv{color:#f0d878}
-.log .ev{color:#8b93a5;font-size:.66rem}
-.log .q{font-size:.6rem;padding:1px 5px;border-radius:8px;font-weight:800;color:#0f1116}
-.log .blunder{background:rgba(255,93,93,.12);border-left:3px solid #ff5d5d}
-.log .best{background:rgba(61,220,132,.10);border-left:3px solid #3ddc84}
-textarea,input{width:100%;background:#0e1118;border:1px solid #2a2f3a;border-radius:6px;color:#e8ecf1;padding:8px;font-family:ui-monospace,monospace;font-size:.74rem}
-.summary{background:#0e1118;border:1px solid #2a2f3a;border-radius:8px;padding:8px;font-size:.74rem;line-height:1.5;margin-top:6px}
-.val{color:#f0d878;font-weight:700}
-.watermark{position:fixed;bottom:10px;right:12px;font-size:.7rem;color:#8b93a5;background:rgba(15,17,22,.75);border:1px solid #2a2f3a;padding:4px 10px;border-radius:20px;backdrop-filter:blur(6px);z-index:99}
-.watermark b{background:linear-gradient(90deg,#d4af37,#f0d878);-webkit-background-clip:text;background-clip:text;color:transparent}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <h1>♟️ Chess Analysis</h1>
 <div class="sub">Engine minimax • Label langkah • Review game</div>
+
 <div class="wrap">
-<div id="board"></div>
-<div>
-<div class="panel">
-<h2>🎯 Status</h2>
-<div id="status" class="status ok">Giliran: Putih</div>
-<div class="eval-bar"><div id="evalFill" class="eval-fill" style="width:50%"></div><div id="evalLabel" class="eval-label">0.00</div></div>
-<h2 style="margin-top:10px">🏷️ Kualitas Langkah</h2>
-<div id="qbox" class="qbox"><span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Gerakkan bidak.</span></div>
-<div class="btns">
-<button id="btnHint" class="full">💡 Best Move</button>
-<button id="btnMate" class="full ghost">🎯 Cari Skakmat</button>
-<button id="btnUndo" class="ghost">↩️ Undo</button>
-<button id="btnFlip" class="ghost">🔄 Flip</button>
-<button id="btnReset" class="full ghost">♻️ Reset</button>
+  <div id="board"></div>
+
+  <div>
+    <div class="panel">
+      <h2>🎯 Status</h2>
+      <div id="status" class="status ok">Giliran: Putih</div>
+      <div class="eval-bar"><div id="evalFill" class="eval-fill" style="width:50%"></div><div id="evalLabel" class="eval-label">0.00</div></div>
+
+      <h2 style="margin-top:10px">🏷️ Kualitas Langkah</h2>
+      <div id="qbox" class="qbox"><span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Gerakkan bidak.</span></div>
+
+      <div class="btns">
+        <button id="btnHint" class="full">💡 Best Move</button>
+        <button id="btnMate" class="full ghost">🎯 Cari Skakmat</button>
+        <button id="btnUndo" class="ghost">↩️ Undo</button>
+        <button id="btnFlip" class="ghost">🔄 Flip</button>
+        <button id="btnReset" class="full ghost">♻️ Reset</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📥 Import</h2>
+      <textarea id="pgnInput" rows="2" placeholder="PGN..."></textarea>
+      <div class="btns" style="margin-top:6px"><button id="btnLoadPgn" class="full">📥 Load PGN</button></div>
+      <input id="fenInput" placeholder="FEN...">
+      <div class="btns" style="margin-top:6px"><button id="btnLoadFen" class="full ghost">📥 Load FEN</button></div>
+    </div>
+
+    <div class="panel">
+      <h2>🔍 Review</h2>
+      <div class="btns"><button id="btnReview" class="full">🔍 Review Game</button></div>
+      <div id="reviewSummary"></div>
+    </div>
+
+    <div class="panel">
+      <h2>📜 Riwayat</h2>
+      <div id="log" class="log"></div>
+    </div>
+  </div>
 </div>
-</div>
-<div class="panel">
-<h2>📥 Import</h2>
-<textarea id="pgnInput" rows="2" placeholder="PGN..."></textarea>
-<div class="btns" style="margin-top:6px"><button id="btnLoadPgn" class="full">📥 Load PGN</button></div>
-<input id="fenInput" placeholder="FEN...">
-<div class="btns" style="margin-top:6px"><button id="btnLoadFen" class="full ghost">📥 Load FEN</button></div>
-</div>
-<div class="panel">
-<h2>🔍 Review</h2>
-<div class="btns"><button id="btnReview" class="full">🔍 Review Game</button></div>
-<div id="reviewSummary"></div>
-</div>
-<div class="panel">
-<h2>📜 Riwayat</h2>
-<div id="log" class="log"></div>
-</div>
-</div>
-</div>
+
 <div class="watermark">Made by <b>VinesDev</b> 🗿</div>
-<script>
-/* ========== SETUP ========== */
-const game = new Chess();
-const board = Chessboard('board', {
-  draggable: true, position: 'start',
-  pieceTheme: 'https://unpkg.com/chessboardjs@1.0.0/www/img/chesspieces/wikipedia/{piece}.png',
-  onDragStart, onDrop, onSnapEnd: () => board.position(game.fen())
-});
-const $status = document.getElementById('status');
-const $log = document.getElementById('log');
-const $evalFill = document.getElementById('evalFill');
-const $evalLabel = document.getElementById('evalLabel');
-const $qbox = document.getElementById('qbox');
-const $reviewSummary = document.getElementById('reviewSummary');
-let selectedSquare = null;
 
-/* ========== KUALITAS ========== */
-const QUALITY = {
-  brilliant:{label:'Brilliant',color:'#26c2a3',emoji:'!!',desc:'Langkah terbaik + taktik.'},
-  great:{label:'Great',color:'#5aa9ff',emoji:'!',desc:'Sangat kuat.'},
-  best:{label:'Best',color:'#3ddc84',emoji:'★',desc:'Langkah terbaik.'},
-  excellent:{label:'Excellent',color:'#8bd17c',emoji:'✓',desc:'Sangat bagus.'},
-  good:{label:'Good',color:'#c8d67a',emoji:'·',desc:'Wajar.'},
-  inaccuracy:{label:'Inaccuracy',color:'#f0c808',emoji:'?!',desc:'Kurang akurat.'},
-  mistake:{label:'Mistake',color:'#ff9f43',emoji:'?',desc:'Kesalahan.'},
-  blunder:{label:'Blunder',color:'#ff5d5d',emoji:'??',desc:'Fatal.'}
-};
-function showQuality(q, extra){
-  const d = QUALITY[q];
-  $qbox.innerHTML = `<span class="badge" style="background:${d.color}">${d.emoji} ${d.label}</span><span class="desc">${d.desc}${extra?'<br><span style="color:#8b93a5">'+extra+'</span>':''}</span>`;
-}
-
-/* ========== ENGINE ========== */
-const PV = {p:100,n:320,b:330,r:500,q:900,k:20000};
-const PST = {
-  p:[0,0,0,0,0,0,0,0,50,50,50,50,50,50,50,50,10,10,20,30,30,20,10,10,5,5,10,25,25,10,5,5,0,0,0,20,20,0,0,0,5,-5,-10,0,0,-10,-5,5,5,10,10,-20,-20,10,10,5,0,0,0,0,0,0,0,0],
-  n:[-50,-40,-30,-30,-30,-30,-40,-50,-40,-20,0,0,0,0,-20,-40,-30,0,10,15,15,10,0,-30,-30,5,15,20,20,15,5,-30,-30,0,15,20,20,15,0,-30,-30,5,10,15,15,10,5,-30,-40,-20,0,5,5,0,-20,-40,-50,-40,-30,-30,-30,-30,-40,-50],
-  b:[-20,-10,-10,-10,-10,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,10,10,5,0,-10,-10,5,5,10,10,5,5,-10,-10,0,10,10,10,10,0,-10,-10,10,10,10,10,10,10,-10,-10,5,0,0,0,0,5,-10,-20,-10,-10,-10,-10,-10,-10,-20],
-  r:[0,0,0,0,0,0,0,0,5,10,10,10,10,10,10,5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,-5,0,0,0,0,0,0,-5,0,0,0,5,5,0,0,0],
-  q:[-20,-10,-10,-5,-5,-10,-10,-20,-10,0,0,0,0,0,0,-10,-10,0,5,5,5,5,0,-10,-5,0,5,5,5,5,0,-5,0,0,5,5,5,5,0,-5,-10,5,5,5,5,5,0,-10,-10,0,5,0,0,0,0,-10,-20,-10,-10,-5,-5,-10,-10,-20],
-  k:[-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-30,-40,-40,-50,-50,-40,-40,-30,-20,-30,-30,-40,-40,-30,-30,-20,-10,-20,-20,-20,-20,-20,-20,-10,20,20,0,0,0,0,20,20,20,30,10,0,0,10,30,20]
-};
-function evaluateBoard(g){
-  if (g.in_checkmate()) return g.turn()==='w' ? -99999 : 99999;
-  if (g.in_draw() || g.in_stalemate()) return 0;
-  let s = 0;
-  const b = g.board();
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++){
-    const p = b[r][c]; if (!p) continue;
-    const idx = r*8+c;
-    const pstIdx = p.color==='w' ? idx : (7-r)*8+c;
-    const pst = PST[p.type] ? PST[p.type][pstIdx] : 0;
-    s += (p.color==='w'?1:-1) * ((PV[p.type]||0) + pst);
-  }
-  return s;
-}
-function negamax(g, d, a, b, col){
-  if (d===0 || g.game_over()) return col * evaluateBoard(g);
-  const ms = g.moves({verbose:true});
-  ms.sort((x,y)=> (y.captured?PV[y.captured]:0) - (x.captured?PV[x.captured]:0));
-  let best = -Infinity;
-  for (const m of ms){
-    g.move(m);
-    const v = -negamax(g, d-1, -b, -a, -col);
-    g.undo();
-    if (v > best) best = v;
-    if (best > a) a = best;
-    if (a >= b) break;
-  }
-  return best;
-}
-function evalBestMove(g, d=3){
-  const ms = g.moves({verbose:true});
-  if (!ms.length) return {move:null, val:0};
-  let best = null, bv = -Infinity;
-  const turn = g.turn()==='w' ? 1 : -1;
-  for (const m of ms){
-    g.move(m);
-    const v = -negamax(g, d-1, -Infinity, Infinity, -turn);
-    g.undo();
-    if (v > bv){ bv = v; best = m; }
-  }
-  return {move:best, val:bv};
-}
-
-/* ========== CLASSIFIER (fixed) ========== */
-// delta = eval sebelum (perspektif pemain) - eval sesudah (perspektif pemain)
-// playedIsBest = langkah yang dimainkan sama dengan best move engine
-function classifyMove(deltaCp, playedIsBest, isSacrifice, isMate){
-  if (isMate) return 'best';
-  if (playedIsBest){
-    if (isSacrifice) return 'brilliant';
-    return 'best';
-  }
-  if (deltaCp <= 10) return 'great';
-  if (deltaCp <= 30) return 'excellent';
-  if (deltaCp <= 80) return 'good';
-  if (deltaCp <= 150) return 'inaccuracy';
-  if (deltaCp <= 300) return 'mistake';
-  return 'blunder';
-}
-
-/* ========== UI ========== */
-function sqEl(sq){ return document.querySelector('.square-'+sq); }
-function clearHL(){ document.querySelectorAll('.hl-from,.hl-to,.hl-hint,.hl-check').forEach(e=>e.classList.remove('hl-from','hl-to','hl-hint','hl-check')); }
-function hl(sq,c){ const e=sqEl(sq); if (e) e.classList.add(c); }
-function setStatus(t,type='ok'){ $status.className='status '+type; $status.textContent=t; }
-
-const moveEvals = [];
-function renderLog(){
-  const h = game.history({verbose:true});
-  if (!h.length){ $log.innerHTML='<div style="color:#8b93a5">Belum ada langkah.</div>'; return; }
-  $log.innerHTML = h.map((m,i)=>{
-    const n = Math.floor(i/2)+1;
-    const side = i%2===0?'Putih':'Hitam';
-    const rec = moveEvals[i];
-    let cls = '';
-    if (rec && (rec.quality==='blunder'||rec.quality==='mistake')) cls='blunder';
-    else if (rec && (rec.quality==='best'||rec.quality==='brilliant'||rec.quality==='great')) cls='best';
-    const q = rec && QUALITY[rec.quality] ? `<span class="q" style="background:${QUALITY[rec.quality].color}">${QUALITY[rec.quality].emoji}</span>` : '';
-    const ev = rec ? `<span class="ev">${rec.eval>0?'+':''}${(rec.eval/100).toFixed(2)}</span>` : '';
-    return `<div class="${cls}"><span><span style="color:#8b93a5">${n}. ${side}</span> <span class="mv">${m.san}</span></span><span style="display:flex;gap:4px;align-items:center">${q}${ev}</span></div>`;
-  }).join('');
-  $log.scrollTop = $log.scrollHeight;
-}
-function updateEvalBar(s){
-  const cl = Math.max(-1000, Math.min(1000, s));
-  $evalFill.style.width = (50 + (cl/1000)*50) + '%';
-  $evalLabel.textContent = (s>0?'+':'') + (s/100).toFixed(2);
-}
-function checkKing(){
-  if (!game.in_check()) return;
-  const t = game.turn(), b = game.board();
-  for (let r=0;r<8;r++) for (let c=0;c<8;c++){
-    const p = b[r][c];
-    if (p && p.type==='k' && p.color===t) hl('abcdefgh'[c]+(8-r), 'hl-check');
-  }
-}
-function updateStatus(){
-  if (game.in_checkmate()){ const l=game.turn()==='w'?'Putih':'Hitam', w=game.turn()==='w'?'Hitam':'Putih'; setStatus(`♛ SKAKMAT! ${w} menang.`,'bad'); return; }
-  if (game.in_stalemate()){ setStatus('⚖️ Stalemate.','warn'); return; }
-  if (game.in_threefold_repetition()){ setStatus('⚖️ Threefold.','warn'); return; }
-  if (game.insufficient_material()){ setStatus('⚖️ Material kurang.','warn'); return; }
-  if (game.in_draw()){ setStatus('⚖️ Draw.','warn'); return; }
-  if (game.in_check()) setStatus(`⚠️ SKAK! Giliran ${game.turn()==='w'?'Putih':'Hitam'}.`,'warn');
-  else setStatus(`Giliran: ${game.turn()==='w'?'Putih':'Hitam'}`,'ok');
-}
-function renderAll(){
-  board.position(game.fen(), false);
-  clearHL(); checkKing(); renderLog(); updateStatus();
-  updateEvalBar(evaluateBoard(game));
-}
-
-/* ========== INPUT ========== */
-function onDragStart(source, piece){
-  if (game.game_over()) return false;
-  if ((game.turn()==='w' && piece.startsWith('b')) || (game.turn()==='b' && piece.startsWith('w'))) return false;
-  selectedSquare = source;
-  clearHL(); hl(source, 'hl-from');
-  return true;
-}
-function onDrop(source, target){
-  const mv = playMove(source, target);
-  if (!mv) return 'snapback';
-  renderAll(); hl(source,'hl-from'); hl(target,'hl-to');
-}
-$(document).on('click', '.square-55d63', function(){
-  const cls = this.className.split(' ').find(c=>c.startsWith('square-'));
-  if (!cls) return;
-  const sq = cls.replace('square-','');
-  if (!selectedSquare){
-    const p = game.get(sq); if (!p) return;
-    if ((game.turn()==='w'&&p.color!=='w')||(game.turn()==='b'&&p.color!=='b')) return;
-    selectedSquare = sq; clearHL(); hl(sq,'hl-from'); return;
-  }
-  if (selectedSquare === sq){ selectedSquare=null; clearHL(); return; }
-  const mv = playMove(selectedSquare, sq);
-  if (mv){ const from=selectedSquare; selectedSquare=null; renderAll(); hl(from,'hl-from'); hl(sq,'hl-to'); }
-  else {
-    const p = game.get(sq);
-    if (p && ((game.turn()==='w'&&p.color==='w')||(game.turn()==='b'&&p.color==='b'))){ selectedSquare=sq; clearHL(); hl(sq,'hl-from'); }
-    else { selectedSquare=null; clearHL(); }
-  }
-});
-
-/* ========== PLAY + CLASSIFY (bersih) ========== */
-function playMove(from, to){
-  try{
-    const fenBefore = game.fen();
-    const mover = game.turn();
-    const scoreBefore = evaluateBoard(game);
-    const { move: bestMv, val: bestVal } = evalBestMove(new Chess(fenBefore), 3);
-
-    let mv;
-    try { mv = game.move({from, to, promotion:'q'}); } catch(e){ return null; }
-    if (!mv) return null;
-
-    const scoreAfter = evaluateBoard(game);
-    const isMate = game.in_checkmate();
-
-    // eval dari perspektif pemain yang baru melangkah
-    const sgn = mover==='w' ? 1 : -1;
-    const beforeForMover = scoreBefore * sgn;
-    const afterForMover  = scoreAfter  * sgn;
-    const bestForMover   = bestVal     * sgn;
-
-    // delta = seberapa jauh langkah ini dari langkah terbaik
-    const delta = Math.max(0, bestForMover - afterForMover);
-    const playedIsBest = bestMv && bestMv.from===from && bestMv.to===to;
-
-    // deteksi sacrifice sederhana: material kita turun tapi eval tetap untung
-    let isSacrifice = false;
-    if (playedIsBest){
-      const matBefore = materialCount(new Chess(fenBefore), mover);
-      const matAfter  = materialCount(game, mover);
-      if (matAfter < matBefore && afterForMover > 50) isSacrifice = true;
-    }
-
-    const quality = classifyMove(delta, playedIsBest, isSacrifice, isMate);
-    const bestSan = bestMv ? bestMv.san : null;
-    showQuality(quality, bestSan && !playedIsBest ? `Best: ${bestSan}` : '');
-    moveEvals.push({san: mv.san, eval: scoreAfter, quality});
-    return mv;
-  } catch(e){ return null; }
-}
-function materialCount(g, color){
-  let v=0;
-  g.board().forEach(row=>row.forEach(p=>{ if (p && p.color===color && p.type!=='k') v += PV[p.type]||0; }));
-  return v;
-}
-
-/* ========== BUTTONS ========== */
-document.getElementById('btnHint').addEventListener('click', ()=>{
-  if (game.game_over()) return;
-  setStatus('🧠 Menganalisis...','blue');
-  setTimeout(()=>{
-    const {move, val} = evalBestMove(game, 3);
-    if (!move){ setStatus('Tidak ada langkah.','bad'); return; }
-    clearHL(); hl(move.from,'hl-from'); hl(move.to,'hl-hint');
-    setStatus(`💡 Best: ${move.san} (${(val/100).toFixed(2)})`,'ok');
-  }, 20);
-});
-document.getElementById('btnMate').addEventListener('click', ()=>{
-  if (game.game_over()) return;
-  const ms = game.moves({verbose:true});
-  for (const m of ms){
-    game.move(m);
-    const mate = game.in_checkmate();
-    game.undo();
-    if (mate){ clearHL(); hl(m.from,'hl-from'); hl(m.to,'hl-hint'); setStatus(`🎯 SKAKMAT! ${m.san}`,'bad'); return; }
-  }
-  setStatus('❌ Tidak ada skakmat 1 langkah.','warn');
-});
-document.getElementById('btnUndo').addEventListener('click', ()=>{
-  game.undo(); moveEvals.pop(); selectedSquare=null; renderAll();
-  $qbox.innerHTML = `<span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Undo.</span>`;
-});
-document.getElementById('btnFlip').addEventListener('click', ()=> board.flip());
-document.getElementById('btnReset').addEventListener('click', ()=>{
-  game.reset(); moveEvals.length=0; selectedSquare=null; board.position('start', false);
-  renderAll(); $reviewSummary.innerHTML='';
-  $qbox.innerHTML = `<span class="badge" style="background:#2a2f3a;color:#8b93a5">—</span><span class="desc">Reset.</span>`;
-});
-
-/* ========== IMPORT ========== */
-document.getElementById('btnLoadPgn').addEventListener('click', ()=>{
-  const pgn = document.getElementById('pgnInput').value.trim();
-  if (!pgn){ setStatus('⚠️ PGN kosong.','warn'); return; }
-  try{
-    game.load_pgn(pgn);
-    moveEvals.length = 0;
-    game.history({verbose:true}).forEach(m=> moveEvals.push({san:m.san, eval:0, quality:null}));
-    selectedSquare = null; renderAll(); setStatus('✅ PGN dimuat.','ok');
-  } catch(e){ setStatus('❌ PGN invalid.','bad'); }
-});
-document.getElementById('btnLoadFen').addEventListener('click', ()=>{
-  const fen = document.getElementById('fenInput').value.trim();
-  if (!fen){ setStatus('⚠️ FEN kosong.','warn'); return; }
-  try{
-    game.load(fen); moveEvals.length = 0; selectedSquare = null; renderAll();
-    setStatus('✅ FEN dimuat.','ok');
-  } catch(e){ setStatus('❌ FEN invalid.','bad'); }
-});
-
-/* ========== REVIEW ========== */
-document.getElementById('btnReview').addEventListener('click', ()=>{
-  const h = game.history({verbose:true});
-  if (!h.length){ setStatus('⚠️ Belum ada langkah.','warn'); return; }
-  setStatus('🔍 Review...','blue');
-  setTimeout(()=>{
-    const replay = new Chess();
-    const counts = {brilliant:0,great:0,best:0,excellent:0,good:0,inaccuracy:0,mistake:0,blunder:0};
-    let totalErr = 0; const bl = [];
-    for (let i=0;i<h.length;i++){
-      const m = h[i];
-      const fenBefore = replay.fen();
-      const mover = replay.turn();
-      const scoreBefore = evaluateBoard(replay);
-      const { move: bestMv, val: bestVal } = evalBestMove(new Chess(fenBefore), 2);
-      replay.move(m.san);
-      const scoreAfter = evaluateBoard(replay);
-      const sgn = mover==='w' ? 1 : -1;
-      const afterForMover = scoreAfter * sgn;
-      const bestForMover = bestVal * sgn;
-      const delta = Math.max(0, bestForMover - afterForMover);
-      const playedIsBest = bestMv && bestMv.san === m.san;
-      let q = classifyMove(delta, playedIsBest, false, replay.in_checkmate());
-      counts[q]++; totalErr += delta;
-      moveEvals[i] = {san: m.san, eval: scoreAfter, quality: q};
-      if (q==='blunder'||q==='mistake') bl.push({n: Math.floor(i/2)+1, side: i%2===0?'P':'H', san: m.san, delta});
-    }
-    renderLog();
-    const acc = Math.max(0, 100 - (totalErr/h.length)/10).toFixed(1);
-    const rows = Object.entries(counts).filter(([k,v])=>v>0).map(([k,v])=>`<div>${QUALITY[k].emoji} ${QUALITY[k].label}: <span class="val">${v}</span></div>`).join('');
-    const bls = bl.slice(0,6).map(b=>`<div>• ${b.n}${b.side}: <b>${b.san}</b> (rugi ${(b.delta/100).toFixed(2)})</div>`).join('') || '<div>Tidak ada blunder besar 🎉</div>';
-    $reviewSummary.innerHTML = `<div class="summary"><div>📊 Akurasi: <span class="val">${acc}%</span></div><div style="margin-top:4px">${rows}</div><div style="margin-top:6px;color:#8b93a5">Blunder:</div><div style="font-family:ui-monospace,monospace;font-size:.7rem">${bls}</div></div>`;
-    setStatus('✅ Review selesai.','ok');
-  }, 20);
-});
-
-/* ========== INIT ========== */
-renderAll();
-</script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
+<script src="https://unpkg.com/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
